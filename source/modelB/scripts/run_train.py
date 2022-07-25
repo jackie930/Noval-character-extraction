@@ -39,6 +39,7 @@ from transformers import (
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
     set_seed,
+    EvalPrediction
 )
 from transformers.file_utils import is_offline_mode
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
@@ -475,7 +476,7 @@ def main():
     )
 
     # Metric
-    metric = load_metric("rouge")
+    #metric = load_metric("rouge")
 
     def postprocess_text(preds, labels):
         preds = [pred.strip() for pred in preds]
@@ -486,6 +487,25 @@ def main():
         labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
 
         return preds, labels
+
+    def compute_metrics(eval_preds):
+        preds, labels = eval_preds
+        if isinstance(preds, tuple):
+            preds = preds[0]
+        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+
+        if data_args.ignore_pad_token_for_loss:
+            # Replace -100 in the labels as we can't decode them.
+            labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        # Some simple post-processing
+        decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        print ("<<<< decoded_preds",decoded_preds)
+        print("<<<< decoded_labels", decoded_labels)
+
+        return {"accuracy": (decoded_preds == decoded_labels).astype(np.float32).mean().item()}
+
+    '''
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
@@ -508,6 +528,7 @@ def main():
         result["gen_len"] = np.mean(prediction_lens)
         result = {k: round(v, 4) for k, v in result.items()}
         return result
+     '''
 
     # Initialize our Trainer
     trainer = Seq2SeqTrainer(
@@ -517,7 +538,8 @@ def main():
         eval_dataset=eval_dataset if training_args.do_eval else None,
         tokenizer=tokenizer,
         data_collator=data_collator,
-        compute_metrics=compute_metrics if training_args.predict_with_generate else None,
+       # compute_metrics=compute_metrics if training_args.predict_with_generate else None,
+        compute_metrics=compute_metrics
     )
 
     # Training
