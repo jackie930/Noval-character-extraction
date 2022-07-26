@@ -500,10 +500,14 @@ def main():
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
         # Some simple post-processing
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-        print ("<<<< decoded_preds",decoded_preds)
-        print("<<<< decoded_labels", decoded_labels)
+        #print ("<<<< decoded_preds",decoded_preds)
+        #print("<<<< decoded_labels", decoded_labels)
 
-        return {"accuracy": (decoded_preds == decoded_labels).astype(np.float32).mean().item()}
+        acc = sum([decoded_preds[i] == decoded_labels[i] for i in range(len(decoded_labels))]) / len(decoded_labels)
+
+        #return {"accuracy": (decoded_preds == decoded_labels).astype(np.float32).mean().item()}
+
+        return {"accuracy": acc}
 
     '''
 
@@ -538,8 +542,8 @@ def main():
         eval_dataset=eval_dataset if training_args.do_eval else None,
         tokenizer=tokenizer,
         data_collator=data_collator,
-       # compute_metrics=compute_metrics if training_args.predict_with_generate else None,
-        compute_metrics=compute_metrics
+        compute_metrics=compute_metrics if training_args.predict_with_generate else None,
+       # compute_metrics=compute_metrics
     )
 
     # Training
